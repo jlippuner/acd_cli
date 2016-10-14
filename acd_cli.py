@@ -127,15 +127,15 @@ def sync_owner_id():
     return owner_id
 
 
-def sync_node_list(full=False, to_file=None, from_file=None) -> 'Union[int, None]':
+def sync_node_list(full=False, to_file=None, from_file=None, now=False) -> 'Union[int, None]':
     global cache
     cp_ = cache.KeyValueStorage.get(CacheConsts.CHECKPOINT_KEY) if not full else None
     lst = cache.KeyValueStorage.get(CacheConsts.LAST_SYNC_KEY)
     lst = float(lst) if lst else 0
 
     wt = min(lst + MIN_SYNC_INTERVAL - time.time(), MIN_SYNC_INTERVAL)
-    if lst and wt > 0:
-        print('Last sync was very recent or has invalid date. Waiting %im %is.' 
+    if lst and wt > 0 and not now:
+        print('Last sync was very recent or has invalid date. Waiting %im %is.'
               % (wt / 60, wt % 60))
         time.sleep(wt)
 
@@ -728,7 +728,7 @@ def no_autores_trash_action(func):
 # actual actions
 
 def sync_action(args: argparse.Namespace):
-    return sync_node_list(args.full, args.to_file, args.from_file)
+    return sync_node_list(args.full, args.to_file, args.from_file, args.now)
 
 
 def old_sync_action(args: argparse.Namespace):
@@ -1314,6 +1314,7 @@ def get_parser() -> tuple:
                                            ' into the file specified')
     sync_sp.add_argument('--from-file', help='update the cache using the contents '
                                              'of the file specified')
+    sync_sp.add_argument('--now', action='store_true', help='perform sync now even if recently synced')
     sync_sp.set_defaults(func=sync_action)
 
     old_sync_sp = subparsers.add_parser('old-sync', add_help=False)

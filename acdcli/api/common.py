@@ -1,7 +1,10 @@
 import re
+import logging
 
 import requests
 from requests.exceptions import ConnectionError
+
+logger = logging.getLogger(__name__)
 
 try:
     from requests.exceptions import ReadTimeout as ReadTimeoutError
@@ -44,10 +47,19 @@ def catch_conn_exception(func):
     :raises RequestError"""
 
     def decorated(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except (ConnectionError, ReadTimeoutError) as e:
-            raise RequestError(RequestError.CODE.CONN_EXCEPTION, e.__str__())
+        retry = 0
+        while (True):
+            try:
+                res = func(*args, **kwargs)
+            except (ConnectionError, ReadTimeoutError) as e:
+                err = RequestError(RequestError.CODE.CONN_EXCEPTION, e.__str__())
+
+                if (retry >= 5):
+                    raise err
+                else:
+                    retry = retry + 1
+                    logger.error(err.__str__() + " (retry %i)" % retry)
+            return res
 
     return decorated
 
